@@ -23,6 +23,9 @@ def extractAddress(bytecode: str) -> dict:
             break
 
     for ind in range(len(splitData)):
+        if "Ox" in splitData[ind]:
+            splitData[ind] = splitData[ind].replace("Ox", "0x")
+
         if splitData[ind] and splitData[ind] != extract["address"]:
             if '\n' in splitData[ind]:
                 splitData[ind] = splitData[ind][:splitData[ind].index('\n')]
@@ -105,13 +108,13 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
                     instructionsString += f"{ins} {dataList[i + 1]}\n"
                     i += 1
                 case "ILOAD":
-                    instructionsString += f"{ins} {chr(97 + dataList[i + 1])}\n"
+                    instructionsString += f"{ins} {chr(96 + dataList[i + 1])}\n"
                     i += 1
                 case "ISTORE":
-                    instructionsString += f"{ins} {chr(97 + dataList[i + 1])}\n"
+                    instructionsString += f"{ins} {chr(96 + dataList[i + 1])}\n"
                     i += 1
                 case "IINC":
-                    instructionsString += f"{ins} {chr(97 + dataList[i + 1])} {dataList[i + 2]}\n"
+                    instructionsString += f"{ins} {chr(96 + dataList[i + 1])} {dataList[i + 2]}\n"
                     i += 2
                 case "INVOKEVIRTUAL":
                     instructionsString += f"{ins} m{dataList[i + 2]}\n"
@@ -152,17 +155,15 @@ print(decompile(
 0x40008 0x0a 0x36 0x01 0x10
 0x4000c 0x40 0x10 0x05 0x15
 0x40010 0x01 0xb6 0x00 0x02
-0x40014 0x10 0x40 0x10 0x06
-0x40018 0xb6 0x00 0x03 0x60
-0x4001c 0x00 0x03 0x00 0x01
-0x40020 0x15 0x01 0x59 0x15
-0x40024 0x02 0x60 0x60 0xac
-0x40028 0x00 0x02 0x00 0x01
-0x4002c 0x15 0x01 0x10 0x02
-0x40030 0x60 0xac 0x00 0x00""",
+0x40014 0x10 0x40 0x10 0x05
+0x40018 0x15 0x01 0xb6 0x00
+0x4001c 0x02 0x60 0x00 0x03
+0x40020 0x00 0x01 0x15 0x01
+0x40024 0x59 0x15 0x02 0x59
+0x40028 0x60 0x60 0x60 0xac""",
 constantPool=
-"""0x0 0x0
-0x1 0x40003
-0x2 0x4001c
-0x3 0x40028"""
+"""
+0x0 Ox0
+0x1 Ox40003
+0x2 Ox4001e"""
 ))
