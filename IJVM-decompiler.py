@@ -3,6 +3,8 @@ INSTRUCTIONS: dict = {0x00: "NOP", 0x10: "BIPUSH", 0x13: "LDCW", 0x15: "ILOAD", 
                       0x60: "IADD", 0x64: "ISUB", 0x7e: "IAND", 0x80: "IOR", 0x84: "IINC", 0x99: "IFEQ", 0x9b: "IFLT", 0x9f: "IFICMPEQ",
                       0xa7: "GOTO", 0xac: "IRETURN", 0xb6: "INVOKEVIRTUAL", 0xc4: "WIDE"}
 SINGLE_INSTRUCTIONS: set = {0x00, 0x57, 0x59, 0x5f, 0x60, 0x64, 0x80, 0x84, 0xac}
+FLAG_INSTRUCTIONS: set = {0x99, 0x9b, 0x9f, 0xa7}
+FLAG_INSTRUCTIONS_STRING: set = {INSTRUCTIONS[i] for i in FLAG_INSTRUCTIONS}
 
 
 def signed2c(byte0: int, byte1: int = None) -> int:
@@ -16,7 +18,7 @@ def signed2c(byte0: int, byte1: int = None) -> int:
         int: Signed 2's complement number.
     """
 
-    if byte1 is None:
+    if byte1 is not None:
         byteCouple: int = byte0 << 8 | byte1
         if byteCouple & 0x8000:
             return -((byteCouple ^ 0xffff) + 1)
@@ -86,10 +88,12 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
     dataList: list = values["data"]
     methodsAddresses: dict = {}
     contants: dict = {}
+    flags: dict = {}
     instructionsString: str = ""
 
     mainEnded: bool = False
     curentAddress: int = values["address"]
+    flagID: int = 0
     i: int = 0
     while i < len(dataList):
         curentAddress = values["address"] + i
@@ -123,8 +127,19 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
             continue
 
 
+
         if dataList[i] in SINGLE_INSTRUCTIONS:
             instructionsString += f"{INSTRUCTIONS[dataList[i]]}\n"
+
+        elif dataList[i] in FLAG_INSTRUCTIONS:
+            flagOffset: int = signed2c(dataList[i + 1], dataList[i + 2])
+            flagAddress: int = curentAddress + flagOffset
+            if flagAddress not in flags:
+                flags[flagAddress] = flagID
+                flagID += 1
+            instructionsString += f"{INSTRUCTIONS[dataList[i]]} f{flags[flagAddress]}\n"
+            i += 2
+ 
         else:
             match ins := INSTRUCTIONS[dataList[i]]:
                 case "BIPUSH":
@@ -162,7 +177,31 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
         constantsString += ".end-constant\n"
         instructionsString = constantsString + instructionsString
 
-    return instructionsString
+    
+    instructionsSplitedLines: list = instructionsString.split('\n')
+    for i in range(len(instructionsSplitedLines)):
+        if ' ' in instructionsSplitedLines[i]:
+            lineSplit: list = instructionsSplitedLines[i].split(' ')
+            instructionsSplitedLines[i] = f"{lineSplit[0]} "
+            instructionsSplitedLines.insert(i + 1, lineSplit[1])
+            if lineSplit[0] in FLAG_INSTRUCTIONS_STRING:
+                instructionsSplitedLines.insert(i + 2, '')
+
+    for flagAddress in flags:
+        ind: int = flagAddress - values["address"] - 1
+        instructionsSplitedLines[ind] = f"f{flags[flagAddress]}:{instructionsSplitedLines[ind]}"
+
+
+    outputString: str = ""
+    for elem in instructionsSplitedLines:
+        if elem == '':
+            continue
+        if elem[-1] != ' ':
+            outputString += f"{elem}\n"
+        else:
+            outputString += elem
+
+    return outputString
 
 
 
@@ -187,19 +226,20 @@ def decompile(bytecode: str, constantPool: str = "", format: str = "addressed") 
 
 
 print(decompile(
-"""0x40000 0xb6 0x00 0x01 0x00
+"""\
+0x40000 0xb6 0x00 0x01 0x00
 0x40004 0x01 0x00 0x03 0x10
 0x40008 0x11 0x36 0x02 0x15
 0x4000c 0x02 0x10 0xf4 0x9b
 0x40010 0x00 0x06 0x10 0x0e
 0x40014 0x5f 0x10 0xec 0x5f
 0x40018 0x10 0x0b 0x36 0x01
-0x4001c 0x5f 0x60 0x00 0x00""",
+0x4001c 0x5f 0x60 0x00 0x00
+""",
+
 constantPool=
-"""0x0 Ox0
+"""\
+0x0 Ox0
 0x1 Ox40003
 """
 ))
-
-
-help(decompile)
