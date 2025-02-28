@@ -63,6 +63,7 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
     pool: dict = extractAddress(constantPool)
     dataList: list = values["data"]
     methodsAddresses: dict = {}
+    contants: dict = {}
     instructionsString: str = ""
 
     mainEnded: bool = False
@@ -120,6 +121,10 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
                     instructionsString += f"{ins} m{dataList[i + 2]}\n"
                     methodsAddresses[toAddress(pool, dataList[i + 2])] = f"m{dataList[i + 2]}"
                     i += 2
+                case "LDCW":
+                    instructionsString += f"{ins} const{dataList[i + 2]}\n"
+                    contants[dataList[i + 2]] = toAddress(pool, dataList[i + 2])
+                    i += 2
 
         i += 1
 
@@ -128,7 +133,15 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
     else:
         instructionsString += ".end-main"
     
+    if contants:
+        constantsString: str = ".constant\n"
+        for key, value in contants.items():
+            constantsString += f"const{key} {value}\n"
+        constantsString += ".end-constant\n"
+        instructionsString = constantsString + instructionsString
+
     return instructionsString
+
 
 
 def decompile(bytecode: str, constantPool: str = "", format: str = "addressed") -> str:
@@ -146,24 +159,18 @@ def decompile(bytecode: str, constantPool: str = "", format: str = "addressed") 
     match format:
         case "addressed":
             return addressedDecompile(bytecode, constantPool)
+        #case "raw":
+        #    return rawDecompile(bytecode)
 
 
 
 print(decompile(
 """0x40000 0xb6 0x00 0x01 0x00
-0x40004 0x01 0x00 0x03 0x10
-0x40008 0x0a 0x36 0x01 0x10
-0x4000c 0x40 0x10 0x05 0x15
-0x40010 0x01 0xb6 0x00 0x02
-0x40014 0x10 0x40 0x10 0x05
-0x40018 0x15 0x01 0xb6 0x00
-0x4001c 0x02 0x60 0x00 0x03
-0x40020 0x00 0x01 0x15 0x01
-0x40024 0x59 0x15 0x02 0x59
-0x40028 0x60 0x60 0x60 0xac""",
+0x40004 0x01 0x00 0x03 0x13
+0x40008 0x00 0x02 0x00 0x00""",
 constantPool=
 """
 0x0 Ox0
 0x1 Ox40003
-0x2 Ox4001e"""
+0x2 Ox10"""
 ))
