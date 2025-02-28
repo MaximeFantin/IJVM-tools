@@ -5,7 +5,7 @@ INSTRUCTIONS: dict = {0x00: "NOP", 0x10: "BIPUSH", 0x13: "LDCW", 0x15: "ILOAD", 
 SINGLE_INSTRUCTIONS: set = {0x00, 0x57, 0x59, 0x5f, 0x60, 0x64, 0x80, 0x84, 0xac}
 
 
-def signed2c(byte0: int, byte1: int) -> int:
+def signed2c(byte0: int, byte1: int = None) -> int:
     """Convert two bytes to a signed 2's complement number.
 
     Args:
@@ -16,11 +16,15 @@ def signed2c(byte0: int, byte1: int) -> int:
         int: Signed 2's complement number.
     """
 
-    byteCouple: int = byte0 << 8 | byte1
-    if byteCouple & 0x8000:
-        return -((byteCouple ^ 0xffff) + 1)
+    if byte1 is None:
+        byteCouple: int = byte0 << 8 | byte1
+        if byteCouple & 0x8000:
+            return -((byteCouple ^ 0xffff) + 1)
+    else:
+        byteCouple: int = byte0
+        if byteCouple & 0x80:
+            return -((byteCouple ^ 0xff) + 1)
     return byteCouple
-
 
 
 def extractAddress(bytecode: str) -> dict:
@@ -124,7 +128,7 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
         else:
             match ins := INSTRUCTIONS[dataList[i]]:
                 case "BIPUSH":
-                    instructionsString += f"{ins} {dataList[i + 1]}\n"
+                    instructionsString += f"{ins} {signed2c(dataList[i + 1])}\n"
                     i += 1
                 case "ILOAD":
                     instructionsString += f"{ins} {chr(96 + dataList[i + 1])}\n"
