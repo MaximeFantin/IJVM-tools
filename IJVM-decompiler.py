@@ -1,14 +1,23 @@
+
+# Set of the characters that are considered as spaces in the IJVM code
 SPACE_CHAR: set = {" ", "\t"}
+
+# List of all the handled instructions
 INSTRUCTIONS: dict = {0x00: "NOP", 0x10: "BIPUSH", 0x13: "LDCW", 0x15: "ILOAD", 0x36: "ISTORE", 0x57: "POP", 0x59: "DUP", 0x5f: "SWAP",
                       0x60: "IADD", 0x64: "ISUB", 0x7e: "IAND", 0x80: "IOR", 0x84: "IINC", 0x99: "IFEQ", 0x9b: "IFLT", 0x9f: "IFICMPEQ",
                       0xa7: "GOTO", 0xac: "IRETURN", 0xb6: "INVOKEVIRTUAL", 0xc4: "WIDE"}
+
+# Set of instructions that do not have any arguments
 SINGLE_INSTRUCTIONS: set = {0x00, 0x57, 0x59, 0x5f, 0x60, 0x64, 0x80, 0x84, 0xac}
+
+# Set of instructions that lead to a flag
 FLAG_INSTRUCTIONS: set = {0x99, 0x9b, 0x9f, 0xa7}
-FLAG_INSTRUCTIONS_STRING: set = {INSTRUCTIONS[i] for i in FLAG_INSTRUCTIONS}
+FLAG_INSTRUCTIONS_STRING: set = {INSTRUCTIONS[i] for i in FLAG_INSTRUCTIONS}    # Set of the string representation of the flag instructions
+
 
 
 def signed2c(byte0: int, byte1: int = None) -> int:
-    """Convert two bytes to a signed 2's complement number.
+    """Convert bytes to a signed 2's complement number.
 
     Args:
         byte0 (int): First byte.
@@ -19,9 +28,9 @@ def signed2c(byte0: int, byte1: int = None) -> int:
     """
 
     if byte1 is not None:
-        byteCouple: int = byte0 << 8 | byte1
+        byteCouple: int = byte0 << 8 | byte1        # Combining the two bytes into a single integer
         if byteCouple & 0x8000:
-            return -((byteCouple ^ 0xffff) + 1)
+            return -((byteCouple ^ 0xffff) + 1)     # If negative, return the 2's complement
     else:
         byteCouple: int = byte0
         if byteCouple & 0x80:
@@ -29,7 +38,8 @@ def signed2c(byte0: int, byte1: int = None) -> int:
     return byteCouple
 
 
-def extractAddress(bytecode: str) -> dict:
+
+def extractData(bytecode: str) -> dict:
     """Separate addresses from the bytecode.
 
     Args:
@@ -41,21 +51,29 @@ def extractAddress(bytecode: str) -> dict:
 
     extract: dict = {"address": None, "data": []}
     splitData: list = bytecode.split(" ")
+    # Extracting the starting address of the bytecode
     for elem in splitData:
         if elem:
             extract["address"] = elem
             break
 
+    # Constructing an integer list of the bytecode
     for ind in range(len(splitData)):
+        # Eliminating misplaces characters
         if "Ox" in splitData[ind]:
             splitData[ind] = splitData[ind].replace("Ox", "0x")
 
+        # Splitting data into individual bytes
         if splitData[ind] and splitData[ind] != extract["address"]:
             if '\n' in splitData[ind]:
                 splitData[ind] = splitData[ind][:splitData[ind].index('\n')]
             extract["data"].append(eval(splitData[ind]))
+        
+    # Converting the address to an integer
     extract["address"] = eval(extract["address"])
+
     return extract
+
 
 
 def toAddress(extractedCode: dict, addresse: int) -> int:
@@ -72,6 +90,7 @@ def toAddress(extractedCode: dict, addresse: int) -> int:
     return extractedCode["data"][addresse - extractedCode["address"]]
 
 
+
 def addressedDecompile(bytecode: str, constantPool: str) -> str:
     """Decompile IJVM code for addressed format.
 
@@ -83,8 +102,8 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
         str: Decompiled IJVM code.
     """
 
-    values: dict = extractAddress(bytecode)
-    pool: dict = extractAddress(constantPool)
+    values: dict = extractData(bytecode)
+    pool: dict = extractData(constantPool)
     dataList: list = values["data"]
     methodsAddresses: dict = {}
     contants: dict = {}
@@ -96,7 +115,10 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
     flagID: int = 0
     i: int = 0
     while i < len(dataList):
+        # Calculating the current position address
         curentAddress = values["address"] + i
+
+        # Setting up the main method
         if not i and dataList[0] == 0xb6:
             instructionsString += ".main\n"
             instructionsString += ".var\n"
@@ -106,6 +128,8 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
             i = 7
             continue
 
+        # If the current address corresponds to the beginning of a method
+        # then initialize said method
         if curentAddress in methodsAddresses:
             if not mainEnded:
                 instructionsString += ".end-main\n"
@@ -127,10 +151,11 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
             continue
 
 
-
+        # Insert instructions that has no arguments
         if dataList[i] in SINGLE_INSTRUCTIONS:
             instructionsString += f"{INSTRUCTIONS[dataList[i]]}\n"
 
+        # Insert instructions that leads to a flag
         elif dataList[i] in FLAG_INSTRUCTIONS:
             flagOffset: int = signed2c(dataList[i + 1], dataList[i + 2])
             flagAddress: int = curentAddress + flagOffset
@@ -140,6 +165,7 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
             instructionsString += f"{INSTRUCTIONS[dataList[i]]} f{flags[flagAddress]}\n"
             i += 2
  
+        # Insert instructions that has arguments
         else:
             match ins := INSTRUCTIONS[dataList[i]]:
                 case "BIPUSH":
@@ -165,11 +191,14 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
 
         i += 1
 
+
+    # Closing the last opened method depending on if the main method has been ended
     if mainEnded:
         instructionsString += ".end-method"
     else:
         instructionsString += ".end-main"
     
+    # Implementing constants declaration
     if contants:
         constantsString: str = ".constant\n"
         for key, value in contants.items():
@@ -178,9 +207,12 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
         instructionsString = constantsString + instructionsString
 
     
+    # Splitting the instructions string into corresponding bytes
+    #? Might be interseting to optimize by interpreting the bytecode directly rather than translating it into a text format first
     instructionsSplitedLines: list = instructionsString.split('\n')
     i = 0
     while i < len(instructionsSplitedLines):
+        # Managing special cases where a method is declared
         if instructionsSplitedLines[i] == ".main" or instructionsSplitedLines[i] == ".method":
             while instructionsSplitedLines[i][-8:] != ".end-var":
                 instructionsSplitedLines[i] = instructionsSplitedLines[i] + '\n' + instructionsSplitedLines[i + 1]
@@ -194,6 +226,8 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
                 instructionsSplitedLines.insert(i + 1, '')
 
 
+        # Splitting multi-byte instructions
+        #? Runtime could be slightly reduced by incrementing the index directly after splitting the instruction
         if ' ' in instructionsSplitedLines[i]:
             lineSplit: list = instructionsSplitedLines[i].split(' ')
             instructionsSplitedLines[i] = f"{lineSplit[0]} "
@@ -205,11 +239,12 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
 
         i += 1
 
+    # Inserting flags in the instruction corresponding to their address
     for flagAddress in flags:
         ind: int = flagAddress - values["address"] - 2
         instructionsSplitedLines[ind] = f"f{flags[flagAddress]}:{instructionsSplitedLines[ind]}"
 
-
+    # Reconstruction of the final string
     outputString: str = ""
     for elem in instructionsSplitedLines:
         if elem == '':
@@ -218,6 +253,7 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
             outputString += f"{elem}\n"
         else:
             outputString += elem
+
 
     return outputString
 
@@ -249,8 +285,12 @@ def decompile(bytecode: str, constantPool: str = "", format: str = "addressed", 
     return outputString
 
 
+
+
+
+# Example fonctionnel
 print(decompile(
-"""\
+"""
 0x40000 0xb6 0x00 0x01 0x00
 0x40004 0x01 0x00 0x00 0x10
 0x40008 0x00 0x10 0x06 0xb6
@@ -269,7 +309,7 @@ print(decompile(
 """,
 
 constantPool=
-"""\
+"""
 0x0 Ox0
 0x1 Ox40003
 0x2 Ox4000e
