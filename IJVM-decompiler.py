@@ -179,16 +179,34 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
 
     
     instructionsSplitedLines: list = instructionsString.split('\n')
-    for i in range(len(instructionsSplitedLines)):
+    i = 0
+    while i < len(instructionsSplitedLines):
+        if instructionsSplitedLines[i] == ".main" or instructionsSplitedLines[i] == ".method":
+            while instructionsSplitedLines[i][-8:] != ".end-var":
+                instructionsSplitedLines[i] = instructionsSplitedLines[i] + '\n' + instructionsSplitedLines[i + 1]
+                instructionsSplitedLines.pop(i + 1)
+            instructionsSplitedLines.insert(i + 1, '')
+            instructionsSplitedLines.insert(i + 1, '')
+            instructionsSplitedLines.insert(i + 1, '')
+            if instructionsSplitedLines[i][:5] == ".main":
+                instructionsSplitedLines.insert(i + 1, '')
+                instructionsSplitedLines.insert(i + 1, '')
+                instructionsSplitedLines.insert(i + 1, '')
+
+
         if ' ' in instructionsSplitedLines[i]:
             lineSplit: list = instructionsSplitedLines[i].split(' ')
             instructionsSplitedLines[i] = f"{lineSplit[0]} "
             instructionsSplitedLines.insert(i + 1, lineSplit[1])
             if lineSplit[0] in FLAG_INSTRUCTIONS_STRING:
                 instructionsSplitedLines.insert(i + 2, '')
+            elif lineSplit[0] == "INVEKEVIRTUAL":
+                instructionsSplitedLines.insert(i + 2, '')
+
+        i += 1
 
     for flagAddress in flags:
-        ind: int = flagAddress - values["address"] - 1
+        ind: int = flagAddress - values["address"] - 2
         instructionsSplitedLines[ind] = f"f{flags[flagAddress]}:{instructionsSplitedLines[ind]}"
 
 
