@@ -1,20 +1,23 @@
 # IJVM-decompiler
-## Vous galérez avec l'IJVM ? Voici quelques outils qui pourrons vous être utils
+### Vous galérez avec l'IJVM ? Voici quelques outils qui pourrons vous être utils
 
 
-### Décompileur
+## Décompileur
 Ce programme permet de transformer un texte représentant un code IJVM compilé en hexadécimal, en code IJVM lisible.
 
 **Fichier:** `IJVM-decompiler.py`
 #### Utilisation:
 **Fonction:** `decompile()`  
-**Arguments:**
-- `bytecode` [str] : (obligatoire) - Code hexadécimal IJVM. Doit obligatoirement être adréssé.
-- `constantPool` [str] : (optionel) - Pool de constantes du code IJVM. Doit obligatoirement être adréssé.
-- `outputFile` [str] : (optionel) - Fichier de sortie du code IJVM.
+**Arguments:**  
+| Argument       | Type  | Optionelle | Description |
+|:---------------|:-----:|:-----------:|:------------|
+| `bytecode`     | `str` | ❌         | Code hexadécimal correspondant au code IJVM. <br/> **Doit obligatoirement être adressé.**
+| `constantPool` | `str` | ✔️         | Pool de constantes hexadécimal du code IJVM. <br/> **Doit obligatoirement être adressé.**
+| `outputFile`   | `str` | ✔️         | Fichier vers lequel sera evoyer le résultat.
+| `format`       | `str` | ✔️         | **/!\ Non implémenté /!\\** <br/> Format du code donné en entrée. <br/> Valeurs possibles: `addressed`, ~~`raw`~~ <br/> Valeur par défault: `addressed`
+<br/>
 
 **Exemple**:  
-<br/>
 
 Décompile un code simple, l'absence de constant pool rend impossible l'utilisation de méthodes et de constantes.
 ```python
