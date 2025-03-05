@@ -13,7 +13,7 @@ Ce programme permet de transformer un texte représentant un code IJVM compilé 
 |:---------------|:-----:|:-----------:|:------------|
 | `bytecode`     | `str` | ❌         | Code hexadécimal correspondant au code IJVM. <br/> **Doit obligatoirement être adressé.**
 | `constantPool` | `str` | ✔️         | Pool de constantes hexadécimal du code IJVM. <br/> **Doit obligatoirement être adressé.**
-| `outputFile`   | `str` | ✔️         | Fichier vers lequel sera evoyer le résultat.
+| `outputFile`   | `str` | ✔️         | Fichier vers lequel sera envoyer le résultat.
 | `format`       | `str` | ✔️         | **/!\ Non implémenté /!\\** <br/> Format du code donné en entrée. <br/> Valeurs possibles: `addressed`, ~~`raw`~~ <br/> Valeur par défault: `addressed`
 <br/>
 
