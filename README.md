@@ -5,7 +5,7 @@
 ## Décompileur
 Ce programme permet de transformer un texte représentant un code IJVM compilé en hexadécimal, en code IJVM lisible.
 
-**Fichier:** `IJVM-decompiler.py`
+**Fichier:** `decompiler.py`
 #### Utilisation:
 **Fonction:** `decompile()`  
 **Arguments:**  
