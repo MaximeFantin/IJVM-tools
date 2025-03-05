@@ -259,7 +259,7 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
 
 
 
-def decompile(bytecode: str, constantPool: str = "", format: str = "addressed", outputFile: str = None) -> str:
+def decompile(bytecode: str, constantPool: str = "", format: str = "addressed", *, outputFile: str = None) -> str:
     """Generate an IJVM code based on IJVM compiled binary.
 
     Args:
