@@ -259,13 +259,14 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
 
 
 
-def decompile(bytecode: str, constantPool: str = "", format: str = "addressed", *, outputFile: str = None) -> str:
+def decompile(bytecode: str, constantPool: str = "", *, format: str = "addressed", outputFile: str = None) -> str:
     """Generate an IJVM code based on IJVM compiled binary.
 
     Args:
         bytecode (str): Inpute compiled IJVM.
         constantPool (str, optional): Constant pool binaries. Defaults to "".
         format (str, optional): Format of the provided binary code, can be <"addressed" | "raw">. Defaults to "addressed".
+        outputFile (str, optional): File where the output is writen. Defaults to None.
 
     Returns:
         str: IJVM code corresponding to the provided input.
@@ -274,8 +275,8 @@ def decompile(bytecode: str, constantPool: str = "", format: str = "addressed", 
     match format:
         case "addressed":
             outputString: str = addressedDecompile(bytecode, constantPool)
-        #case "raw":
-        #    outputString: str = rawDecompile(bytecode)
+        case "raw":
+            raise NotImplementedError("Raw format is not supported yet.")
 
     if outputFile:
         file = open(outputFile, "w")
