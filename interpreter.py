@@ -95,7 +95,7 @@ def signed2c(byte0: int, byte1: int = None) -> int:
     return byteCouple
 
 
-def executeInstruction(instruction: int, stack: list, pointer: int, bytecode: dict, constantPool: dict) -> int:
+def executeInstruction(stack: list, pointer: int, bytecode: dict, constantPool: dict) -> int:
     """Take an instruction and executes it.
 
     Args:
@@ -108,9 +108,10 @@ def executeInstruction(instruction: int, stack: list, pointer: int, bytecode: di
         int: New position of the pointer.
     """
 
-    match INSTRUCTIONS[instruction]:
+    match INSTRUCTIONS[bytecode["data"][pointer]]:
         case "NOP":
             return pointer + 1
+
         case "BIPUSH":
             stack.append(signed2c(
                 bytecode["data"][pointer + 1]
@@ -222,12 +223,19 @@ def executeInstruction(instruction: int, stack: list, pointer: int, bytecode: di
             return returnPointer
         
         case "INVOKEVIRTUAL":
-            stack[-1] = 0x2_000_000 + len(stack) - 1
             methodAddr: int = constantPool["data"][
                 (bytecode["data"][pointer + 1] << 8 | bytecode["data"][pointer + 1]) - constantPool["address"]
             ]
             methodAddr -= bytecode["address"]
-            varAmount: int = bytecode["data"][methodAddr + 2] << 8 | bytecode["data"][methodAddr + 2]
+            varAmount: int = bytecode["data"][methodAddr + 2] << 8 | bytecode["data"][methodAddr + 3]
+            envDefinition: int = 0x2_000_000 + len(stack) + varAmount
+            argsAmount: int = bytecode["data"][methodAddr] << 8 | bytecode["data"][methodAddr + 1]
+            bytecode["data"][-argsAmount] = envDefinition
+            for _ in range(varAmount):
+                stack.append(0)
+            stack.append(methodAddr)
+            stack.append(0x2_000_000)
+            return methodAddr + 4
 
         case "WIDE":
             raise NotImplementedError("WIDE instruction is not supported yet.")
@@ -253,22 +261,23 @@ def run(bytecode: str, constantPool: str = "", *, format: str = "addressed", out
             raise NotImplementedError("Raw format is not supported yet.")
 
 
-print(extractData(
-"""
-0x40000 0xb6 0x00 0x01 0x00
-0x40004 0x01 0x00 0x00 0x10
-0x40008 0x00 0x10 0x06 0xb6
-0x4000c 0x00 0x02 0x00 0x02
-0x40010 0x00 0x00 0x15 0x01
-0x40014 0x10 0x01 0x9f 0x00
-0x40018 0x22 0x15 0x01 0x10
-0x4001c 0x02 0x9f 0x00 0x1b
-0x40020 0x10 0x00 0x15 0x01
-0x40024 0x10 0x01 0x64 0xb6
-0x40028 0x00 0x02 0x10 0x00
-0x4002c 0x15 0x01 0x10 0x02
-0x40030 0x64 0xb6 0x00 0x02
-0x40034 0x60 0xa7 0x00 0x05
-0x40038 0x10 0x01 0xac 0x00
-"""
-))
+
+#print(extractData(
+#"""
+#0x40000 0xb6 0x00 0x01 0x00
+#0x40004 0x01 0x00 0x00 0x10
+#0x40008 0x00 0x10 0x06 0xb6
+#0x4000c 0x00 0x02 0x00 0x02
+#0x40010 0x00 0x00 0x15 0x01
+#0x40014 0x10 0x01 0x9f 0x00
+#0x40018 0x22 0x15 0x01 0x10
+#0x4001c 0x02 0x9f 0x00 0x1b
+#0x40020 0x10 0x00 0x15 0x01
+#0x40024 0x10 0x01 0x64 0xb6
+#0x40028 0x00 0x02 0x10 0x00
+#0x4002c 0x15 0x01 0x10 0x02
+#0x40030 0x64 0xb6 0x00 0x02
+#0x40034 0x60 0xa7 0x00 0x05
+#0x40038 0x10 0x01 0xac 0x00
+#"""
+#))
