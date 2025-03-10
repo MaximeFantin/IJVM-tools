@@ -222,8 +222,13 @@ def executeInstruction(instruction: int, stack: list, pointer: int, bytecode: di
             return returnPointer
         
         case "INVOKEVIRTUAL":
-            raise NotImplementedError("INVOKEVIRTUAL instruction is not supported yet.")
-        
+            stack[-1] = 0x2_000_000 + len(stack) - 1
+            methodAddr: int = constantPool["data"][
+                (bytecode["data"][pointer + 1] << 8 | bytecode["data"][pointer + 1]) - constantPool["address"]
+            ]
+            methodAddr -= bytecode["address"]
+            varAmount: int = bytecode["data"][methodAddr + 2] << 8 | bytecode["data"][methodAddr + 2]
+
         case "WIDE":
             raise NotImplementedError("WIDE instruction is not supported yet.")
 
