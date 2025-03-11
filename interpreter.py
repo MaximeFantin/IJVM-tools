@@ -241,6 +241,9 @@ def executeInstruction(stack: list, pointer: int, bytecode: dict, constantPool: 
             raise NotImplementedError("WIDE instruction is not supported yet.")
 
 
+def addressedRun(bytecode: str, constantPool: str = "") -> list:
+
+
 def run(bytecode: str, constantPool: str = "", *, format: str = "addressed", outputFile: str = None) -> list:
     """Takes an IJVM bytecode, runs it and returns the stack state.
 
