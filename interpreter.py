@@ -40,16 +40,17 @@ def extractData(bytecode: str) -> dict:
             if not byte:
                 continue
             val: int = toHex(byte)
-            if not extractedData["address"]:
+            if extractedData["address"] == None:
                 i: int = 0
                 while val >> i > 1:
                     i += 1
                 extractedData["address"] = val
-                extractedData["addressOffset"] = 1 << i
+                if val:
+                    extractedData["addressOffset"] = 1 << i
                 continue
             if not (val & extractedData["addressOffset"]):
                 extractedData["data"].append(val)
-    
+
     return extractedData
 
 
@@ -226,22 +227,42 @@ def executeInstruction(stack: list, pointer: int, bytecode: dict, constantPool: 
             methodAddr: int = constantPool["data"][
                 (bytecode["data"][pointer + 1] << 8 | bytecode["data"][pointer + 1]) - constantPool["address"]
             ]
-            methodAddr -= bytecode["address"]
-            varAmount: int = bytecode["data"][methodAddr + 2] << 8 | bytecode["data"][methodAddr + 3]
+            methodPointer = methodAddr - bytecode["address"]
+            varAmount: int = bytecode["data"][methodPointer + 2] << 8 | bytecode["data"][methodPointer + 3]
             envDefinition: int = 0x2_000_000 + len(stack) + varAmount
-            argsAmount: int = bytecode["data"][methodAddr] << 8 | bytecode["data"][methodAddr + 1]
-            bytecode["data"][-argsAmount] = envDefinition
+            argsAmount: int = bytecode["data"][methodPointer] << 8 | bytecode["data"][methodPointer + 1]
             for _ in range(varAmount):
                 stack.append(0)
+            stack[-argsAmount] = envDefinition
             stack.append(methodAddr)
             stack.append(0x2_000_000)
-            return methodAddr + 4
+            return methodPointer + 4
 
         case "WIDE":
             raise NotImplementedError("WIDE instruction is not supported yet.")
 
 
 def addressedRun(bytecode: str, constantPool: str = "") -> list:
+    """Takes an IJVM bytecode in addressed format, runs it and returns the stack state.
+
+    Args:
+        bytecode (str): IJVM bytecode.
+        constantPool (str, optional): Constant pool of the IJVM bytecode. Defaults to "".
+
+    Returns:
+        list: State of the stack after the execution of the bytecode.
+    """
+
+    bytecodeData: dict = extractData(bytecode)
+    constantPoolData: dict = extractData(constantPool)
+    stack: list = [0]
+    pointer: int = 0
+
+    while pointer < len(bytecodeData["data"]):
+        pointer = executeInstruction(stack, pointer, bytecodeData, constantPoolData)
+    
+    return stack
+
 
 
 def run(bytecode: str, constantPool: str = "", *, format: str = "addressed", outputFile: str = None) -> list:
@@ -259,28 +280,39 @@ def run(bytecode: str, constantPool: str = "", *, format: str = "addressed", out
 
     match format:
         case "addressed":
-            raise NotImplementedError("Addressed format is not supported yet.")
+            outputStack: list = addressedRun(bytecode, constantPool)
         case "raw":
             raise NotImplementedError("Raw format is not supported yet.")
 
+    if outputFile:
+        with open(outputFile, "w") as file:
+            for item in outputStack:
+                file.write(f"{item}\n")
+
+    return outputStack
 
 
-#print(extractData(
-#"""
-#0x40000 0xb6 0x00 0x01 0x00
-#0x40004 0x01 0x00 0x00 0x10
-#0x40008 0x00 0x10 0x06 0xb6
-#0x4000c 0x00 0x02 0x00 0x02
-#0x40010 0x00 0x00 0x15 0x01
-#0x40014 0x10 0x01 0x9f 0x00
-#0x40018 0x22 0x15 0x01 0x10
-#0x4001c 0x02 0x9f 0x00 0x1b
-#0x40020 0x10 0x00 0x15 0x01
-#0x40024 0x10 0x01 0x64 0xb6
-#0x40028 0x00 0x02 0x10 0x00
-#0x4002c 0x15 0x01 0x10 0x02
-#0x40030 0x64 0xb6 0x00 0x02
-#0x40034 0x60 0xa7 0x00 0x05
-#0x40038 0x10 0x01 0xac 0x00
-#"""
-#))
+print(run(
+"""
+0x40000 0xb6 0x00 0x01 0x00
+0x40004 0x01 0x00 0x03 0x10
+0x40008 0x0a 0x36 0x01 0x10
+0x4000c 0x40 0x10 0x05 0x15
+0x40010 0x01 0xb6 0x00 0x02
+0x40014 0x10 0x40 0x10 0x06
+0x40018 0xb6 0x00 0x03 0x60
+0x4001c 0x00 0x03 0x00 0x01
+0x40020 0x15 0x01 0x59 0x15
+0x40024 0x02 0x60 0x60 0xac
+0x40028 0x00 0x02 0x00 0x01
+0x4002c 0x15 0x01 0x10 0x02
+0x40030 0x60 0xac 0x00 0x00
+""",
+constantPool=
+"""
+0x0 Ox0
+0x1 Ox40003
+0x2 Ox4001c
+0x3 Ox40028
+"""
+))
