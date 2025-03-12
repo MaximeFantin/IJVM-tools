@@ -218,12 +218,12 @@ def executeInstruction(stack: list, pointer: int, bytecode: dict, constantPool: 
                 stack.pop()
             stack[-1] = returnValue
             return returnPointer
-        
+
         case "INVOKEVIRTUAL":
             methodAddr: int = constantPool["data"][
                 (bytecode["data"][pointer + 1] << 8 | bytecode["data"][pointer + 1]) - constantPool["address"]
             ]
-            methodPointer = methodAddr - bytecode["address"]
+            methodPointer = bytecode["address"] - methodAddr
             varAmount: int = bytecode["data"][methodPointer + 2] << 8 | bytecode["data"][methodPointer + 3]
             envDefinition: int = 0x2_000_000 + len(stack) + varAmount
             argsAmount: int = bytecode["data"][methodPointer] << 8 | bytecode["data"][methodPointer + 1]
@@ -258,7 +258,6 @@ def addressedRun(bytecode: str, constantPool: str = "") -> list:
         pointer = executeInstruction(stack, pointer, bytecodeData, constantPoolData)
     
     return stack
-
 
 
 def run(bytecode: str, constantPool: str = "", *, format: str = "addressed", outputFile: str = None) -> list:
