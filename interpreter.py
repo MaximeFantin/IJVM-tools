@@ -33,23 +33,19 @@ def extractData(bytecode: str) -> dict:
     """
 
     splitedText: list = bytecode.split("\n")
-    extractedData: dict = {"address": None, "addressOffset": 0, "data": []}
+    extractedData: dict = {"address": None, "data": []}
     for line in splitedText:
         splitedLine: list = line.split(" ")
+        lineStarted: bool = False
         for byte in splitedLine:
             if not byte:
                 continue
             val: int = toHex(byte)
-            if extractedData["address"] == None:
-                i: int = 0
-                while val >> i > 1:
-                    i += 1
+            if not lineStarted:
+                lineStarted = True
                 extractedData["address"] = val
-                if val:
-                    extractedData["addressOffset"] = 1 << i
                 continue
-            if not (val & extractedData["addressOffset"]):
-                extractedData["data"].append(val)
+            extractedData["data"].append(val)
 
     return extractedData
 
