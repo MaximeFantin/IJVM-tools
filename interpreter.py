@@ -93,6 +93,27 @@ def signed2c(byte0: int, byte1: int = None) -> int:
     return byteCouple
 
 
+def inMethodDefSection(pointer: int, bytecode: dict, constantPool: dict) -> bool:
+    """Check if the pointer is in a method definition section.
+
+    Args:
+        pointer (int): Actual position of the pointer.
+        bytecode (dict): Dictionary containing the bytecode.
+        constantPool (dict): Dictionary containing the constant pool.
+
+    Returns:
+        bool: True if the pointer is in a method definition section, False otherwise.
+    """
+
+    defSectionAddrs: list[int] = []
+    for addr in constantPool["data"]:
+        if (a := addr - bytecode["address"]) > 0:
+            if pointer in range(a, a + 4):
+                return True
+
+    return False
+
+
 def executeInstruction(stack: list, pointer: int, bytecode: dict, constantPool: dict) -> int:
     """Take an instruction and executes it.
 
@@ -236,7 +257,6 @@ def executeInstruction(stack: list, pointer: int, bytecode: dict, constantPool: 
             stack[-argsAmount] = envDefinition
             for _ in range(varAmount):
                 stack.append(0)
-            stack[-argsAmount] = envDefinition
             #stack.append(methodAddr)
             stack.append(bytecode["address"] + pointer + 3)
             stack.append(0x2_000_000)
@@ -262,7 +282,7 @@ def addressedRun(bytecode: str, constantPool: str = "") -> list:
     stack: list = [0]
     pointer: int = 0
 
-    while pointer < len(bytecodeData["data"]):
+    while pointer < len(bytecodeData["data"]) and not inMethodDefSection(pointer, bytecodeData, constantPoolData):
         pointer = executeInstruction(stack, pointer, bytecodeData, constantPoolData)
     
     return stack
