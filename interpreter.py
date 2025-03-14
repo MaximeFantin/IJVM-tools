@@ -230,7 +230,8 @@ def executeInstruction(stack: list, pointer: int, bytecode: dict, constantPool: 
             for _ in range(varAmount):
                 stack.append(0)
             stack[-argsAmount] = envDefinition
-            stack.append(methodAddr)
+            #stack.append(methodAddr)
+            stack.append(bytecode["address"] + pointer + 3)
             stack.append(0x2_000_000)
             return methodPointer + 4
 
