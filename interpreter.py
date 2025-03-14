@@ -283,6 +283,9 @@ def addressedRun(bytecode: str, constantPool: str = "") -> list:
     pointer: int = 0
 
     while pointer < len(bytecodeData["data"]) and not inMethodDefSection(pointer, bytecodeData, constantPoolData):
+        if bytecodeData["data"][pointer] not in INSTRUCTIONS:
+            pointer += 1
+            continue
         pointer = executeInstruction(stack, pointer, bytecodeData, constantPoolData)
     
     return stack

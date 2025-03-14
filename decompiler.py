@@ -1,4 +1,3 @@
-
 # Set of the characters that are considered as spaces in the IJVM code
 SPACE_CHAR: set = {" ", "\t"}
 
@@ -13,7 +12,6 @@ SINGLE_INSTRUCTIONS: set = {0x00, 0x57, 0x59, 0x5f, 0x60, 0x64, 0x80, 0x84, 0xac
 # Set of instructions that lead to a flag
 FLAG_INSTRUCTIONS: set = {0x99, 0x9b, 0x9f, 0xa7}
 FLAG_INSTRUCTIONS_STRING: set = {INSTRUCTIONS[i] for i in FLAG_INSTRUCTIONS}    # Set of the string representation of the flag instructions
-
 
 
 def signed2c(byte0: int, byte1: int = None) -> int:
@@ -38,42 +36,49 @@ def signed2c(byte0: int, byte1: int = None) -> int:
     return byteCouple
 
 
-
 def extractData(bytecode: str) -> dict:
-    """Separate addresses from the bytecode.
+    """Extracts the data from the bytecode.
 
     Args:
-        bytecode (str): Input bytecode.
+        bytecode (str): Compiled IJVM bytecode.
 
     Returns:
-        dict: Dictionary containing both the starting address and the code.
+        dict: A dictionary containing the starting address and the data.
     """
 
-    extract: dict = {"address": None, "data": []}
-    splitData: list = bytecode.split(" ")
-    # Extracting the starting address of the bytecode
-    for elem in splitData:
-        if elem:
-            extract["address"] = elem
-            break
+    splitedText: list = bytecode.split("\n")
+    extractedData: dict = {"address": None, "data": []}
+    for line in splitedText:
+        splitedLine: list = line.split(" ")
+        lineStarted: bool = False
+        for byte in splitedLine:
+            if not byte:
+                continue
+            val: int = toHex(byte)
+            if not lineStarted:
+                lineStarted = True
+                if extractedData["address"] == None:
+                    extractedData["address"] = val
+                continue
+            extractedData["data"].append(val)
 
-    # Constructing an integer list of the bytecode
-    for ind in range(len(splitData)):
-        # Eliminating misplaces characters
-        if "Ox" in splitData[ind]:
-            splitData[ind] = splitData[ind].replace("Ox", "0x")
+    return extractedData
 
-        # Splitting data into individual bytes
-        if splitData[ind] and splitData[ind] != extract["address"]:
-            if '\n' in splitData[ind]:
-                splitData[ind] = splitData[ind][:splitData[ind].index('\n')]
-            extract["data"].append(eval(splitData[ind]))
-        
-    # Converting the address to an integer
-    extract["address"] = eval(extract["address"])
 
-    return extract
+def toHex(byte: str) -> int:
+    """Takes a hex number written as a string and returns it as an integer.
 
+    Args:
+        byte (str): Input hex number.
+
+    Returns:
+        int: Integer representation of the hex number.
+    """
+
+    if "Ox" in byte:
+        byte = byte.replace("Ox", "0x")
+
+    return int(byte, 16)
 
 
 def toAddress(extractedCode: dict, addresse: int) -> int:
@@ -88,7 +93,6 @@ def toAddress(extractedCode: dict, addresse: int) -> int:
     """
 
     return extractedCode["data"][addresse - extractedCode["address"]]
-
 
 
 def addressedDecompile(bytecode: str, constantPool: str) -> str:
@@ -258,7 +262,6 @@ def addressedDecompile(bytecode: str, constantPool: str) -> str:
     return outputString
 
 
-
 def decompile(bytecode: str, constantPool: str = "", *, format: str = "addressed", outputFile: str = None) -> str:
     """Generate an IJVM code based on IJVM compiled binary.
 
@@ -284,9 +287,6 @@ def decompile(bytecode: str, constantPool: str = "", *, format: str = "addressed
         file.close()
     
     return outputString
-
-
-
 
 
 if __name__ == "__main__":
