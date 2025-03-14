@@ -43,7 +43,8 @@ def extractData(bytecode: str) -> dict:
             val: int = toHex(byte)
             if not lineStarted:
                 lineStarted = True
-                extractedData["address"] = val
+                if extractedData["address"] == None:
+                    extractedData["address"] = val
                 continue
             extractedData["data"].append(val)
 
@@ -96,9 +97,9 @@ def executeInstruction(stack: list, pointer: int, bytecode: dict, constantPool: 
     """Take an instruction and executes it.
 
     Args:
-        instruction (int): Value corresponding to the instruction.
         stack (list): Actual state of the stack.
         pointer (int): Position of the pointer in the stack.
+        bytecode (list): IJVM bytecode.
         constantPool (list): Constant pool of the IJVM bytecode.
 
     Returns:
@@ -162,19 +163,23 @@ def executeInstruction(stack: list, pointer: int, bytecode: dict, constantPool: 
             return pointer + 1
 
         case "IADD":
-            stack[-2] += stack.pop()
+            TOS: int = stack.pop()
+            stack[-1] += TOS
             return pointer + 1
 
         case "ISUB":
-            stack[-2] -= stack.pop()
+            TOS: int = stack.pop()
+            stack[-1] -= TOS
             return pointer + 1
 
         case "IAND":
-            stack[-2] &= stack.pop()
+            TOS: int = stack.pop()
+            stack[-1] &= TOS
             return pointer + 1
 
         case "IOR":
-            stack[-2] |= stack.pop()
+            TOS: int = stack.pop()
+            stack[-1] |= TOS
             return pointer + 1
 
         case "IINC":
@@ -212,7 +217,8 @@ def executeInstruction(stack: list, pointer: int, bytecode: dict, constantPool: 
             returnValue: int = stack.pop()
             while stack[-1] != 0x2_000_000:
                 stack.pop()
-            methodAddr: int = (len(stack) - 2) | 0x2_000_000
+            stack.pop()
+            methodAddr: int = (len(stack) - 1) | 0x2_000_000
             returnPointer: int = stack.pop() - bytecode["address"]
             while stack[-1] != methodAddr:
                 stack.pop()
@@ -221,16 +227,17 @@ def executeInstruction(stack: list, pointer: int, bytecode: dict, constantPool: 
 
         case "INVOKEVIRTUAL":
             methodAddr: int = constantPool["data"][
-                (bytecode["data"][pointer + 1] << 8 | bytecode["data"][pointer + 1]) - constantPool["address"]
+                (bytecode["data"][pointer + 1] << 8 | bytecode["data"][pointer + 2]) - constantPool["address"]
             ]
-            methodPointer = bytecode["address"] - methodAddr
+            methodPointer = methodAddr - bytecode["address"]
             varAmount: int = bytecode["data"][methodPointer + 2] << 8 | bytecode["data"][methodPointer + 3]
             envDefinition: int = 0x2_000_000 + len(stack) + varAmount
             argsAmount: int = bytecode["data"][methodPointer] << 8 | bytecode["data"][methodPointer + 1]
+            stack[-argsAmount] = envDefinition
             for _ in range(varAmount):
                 stack.append(0)
-            stack[-argsAmount] = envDefinition
-            stack.append(methodAddr)
+            # stack.append(methodAddr)
+            stack.append(bytecode["address"] + pointer + 3)
             stack.append(0x2_000_000)
             return methodPointer + 4
 
